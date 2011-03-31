@@ -106,6 +106,9 @@ def main():
         print "Database file already exists. If you want to destroy it and " \
               "start over, please manually delete it."
         raise SystemExit()
+    elif options._create and options._db != ':memory:':
+        print "No database file specified. Specify one with -f"
+        raise SystemExit()
     
     db = sqlite3.connect(options._db, isolation_level=None)
     if not dbExists:

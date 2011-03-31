@@ -56,7 +56,7 @@ class RPCClient(object):
         d = threads.deferToThread(self.service.getblockcount)
         
         def callback(result):
-            if not isinstance(result, failure.Failure):
+            if isinstance(result, int):
                     self._gotBlock(result)
             reactor.callLater(1.0, self._checkBlock)
         d.addBoth(callback)
