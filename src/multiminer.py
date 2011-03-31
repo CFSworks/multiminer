@@ -106,7 +106,7 @@ def main():
         print "Database file already exists. If you want to destroy it and " \
               "start over, please manually delete it."
         raise SystemExit()
-    elif options._create and options._db != ':memory:':
+    elif options._create and options._db == ':memory:':
         print "No database filename specified. Use -f"
         raise SystemExit()
     
