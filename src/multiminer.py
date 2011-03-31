@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # Copyright (C) 2011 by Sam Edwards <CFSworks@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
