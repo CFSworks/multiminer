@@ -15,16 +15,16 @@ class WebServer(Resource):
     It's intended to be used as an admin interface, and to provide old-fashioned
     getwork support to miners.
     """
-
-    # This maps account IDs to assigned WorkUnits.
-    assignedWork = {}
-    
-    # This has the same purpose as in WorkProvider.
-    template = None
     
     def __init__(self, server):
         Resource.__init__(self)
         self.server = server
+        
+        # This maps account IDs to assigned WorkUnits.
+        self.assignedWork = {}
+    
+        # This has the same purpose as in WorkProvider.
+        self.template = None
         
         rootdir = self.server.getConfig('web_root', str, 'www')
         self.root = File(rootdir)

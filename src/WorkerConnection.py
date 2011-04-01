@@ -33,8 +33,6 @@ class WorkerConnection(MMPProtocolBase):
     
     account = None
     connectedAt = None
-    meta = {}
-    work = []
     
     sendingWork = False
     sentTarget = None
@@ -49,6 +47,8 @@ class WorkerConnection(MMPProtocolBase):
     def connectionMade(self):
         self.factory.workers.append(self)
         self.connectedAt = time.time()
+        self.meta = {}
+        self.work = []
     def connectionLost(self, reason):
         self.factory.workers.remove(self)
     

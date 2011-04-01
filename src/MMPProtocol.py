@@ -151,13 +151,13 @@ class MMPClient(ReconnectingClientFactory):
     
     username = None
     password = None
-    meta = {'version': 'MMPClient v0.8 by CFSworks'}
     
-    deferreds = {}
     connection = None
     
     def __init__(self, handler):
         self.handler = handler
+        self.meta = {'version': 'MMPClient v0.8 by CFSworks'}
+        self.deferreds = {}
     
     def connect(self, host, port, username, password):
         """Tells the MMPClient where the MMP server is located, as well as what

@@ -33,12 +33,11 @@ class RPCClient(object):
     """This class mimics the MMPClient API, but gets its work directly from
     a running Bitcoin client.
     """
-    
-    service = None
-    block = None
 
     def __init__(self, handler):
         self.handler = handler
+        self.service = None
+        self.block = None
     
     def runCallback(self, callback, *args):
         """Call the callback on the handler, if it's there, specifying args."""

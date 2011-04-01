@@ -42,17 +42,14 @@ class WorkProvider(object):
     the manager/callback handler for the backend connection.
     """
     
-    backend = None
-    work = []
-    template = None
-    
-    block = None
-    
-    deferreds = []
-    workRequested = False
-    
     def __init__(self, server):
         self.server = server
+        self.backend = None
+        self.work = []
+        self.template = None
+        self.block = None
+        self.deferreds = []
+        self.workRequested = False
     
     def start(self):
         """Starts the WorkProvider; creates and establishes the backend

@@ -33,15 +33,14 @@ class ClusterServer(Factory):
     """
 
     protocol = WorkerConnection
-    workers = []
-    
-    web = None
     
     version = 'Multiminer Server v1.3 by CFSworks'
     
     def __init__(self, db):
         self.db = db
         self.workProvider = WorkProvider(self)
+        self.workers = []
+        self.web = None
     
     def getConfig(self, var, type=str, default=None):
         """Reads a configuration variable out of the database.
