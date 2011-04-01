@@ -186,6 +186,21 @@ class WebServer(Resource):
         worker.setData(var, value)
         return True
     
+    def rpc_setconnectionmeta(self, account, params):
+        if len(params) == 3:
+            connection = int(params[0])
+            var = str(params[1])
+            value = str(params[2])
+        else:
+            return False
+        
+        connection = self.server.getConnection(connection)
+        if connection is not None:
+            connection.meta[var] = value
+            return True
+        
+        return False
+    
     def rpc_addworker(self, account, params):
         if len(params) == 2:
             username = str(params[0])
