@@ -80,7 +80,7 @@ class WorkProvider(object):
     def onWork(self, wu):
         """Called by the backend when it receives a new WorkUnit."""
         
-        work = WorkUnit(wu.data, wu.target, wu.mask)
+        work = WorkUnit(self, wu.data, wu.target, wu.mask)
         
         self.workRequested = False
         

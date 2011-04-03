@@ -37,7 +37,7 @@ class WorkUnit(object):
     
     WORK_LENGTH = 80
     
-    def __init__(self, data, target, mask=32):
+    def __init__(self, provider, data, target, mask=32):
         if len(data) != self.WORK_LENGTH:
             raise ValueError('invalid work string length')
         
@@ -47,6 +47,7 @@ class WorkUnit(object):
         nonce &= ~((1<<mask)-1)
         self.data = struct.pack('<76sI', misc, nonce)
         
+        self.provider = provider
         self.target = target
         self.mask = mask
         self.original = True
@@ -76,11 +77,11 @@ class WorkUnit(object):
         commonData = self.data[:76]
         
         nonce = self.getNonce()
-        left = WorkUnit(struct.pack('<76sI', commonData, nonce), self.target,
-                                    self.mask-1)
+        left = WorkUnit(self.provider, struct.pack('<76sI', commonData, nonce),
+                        self.target, self.mask-1)
         nonce |= 1<<(self.mask-1)
-        right = WorkUnit(struct.pack('<76sI', commonData, nonce), self.target,
-                                     self.mask-1)
+        right = WorkUnit(self.provider, struct.pack('<76sI', commonData, nonce),
+                         self.target, self.mask-1)
         
         left.original = right.original = False
         
@@ -133,6 +134,12 @@ class WorkUnit(object):
         """
         # The timestamps are swapped so they get sorted in descending order.
         comparison = cmp(other.getTimestamp(), self.getTimestamp())
+        
+        # If the user wants the work buffer to be a fifo, swap the comparison
+        # back to ascending order.
+        if self.provider.server.getConfig('work_fifo', int, 0):
+            comparison = -comparison
+        
         if comparison != 0:
             return comparison
         else:
