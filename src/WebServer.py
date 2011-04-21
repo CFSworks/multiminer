@@ -1,6 +1,6 @@
 import json
 from twisted.internet import reactor, defer
-from twisted.web import server
+from twisted.web import server, script
 from twisted.web.resource import Resource
 from twisted.web.static import File
 from WorkerAccount import WorkerAccount
@@ -28,6 +28,7 @@ class WebServer(Resource):
         
         rootdir = self.server.getConfig('web_root', str, 'www')
         self.root = File(rootdir)
+        self.root.processors = {'.rpy': script.ResourceScript}
 
     def start(self):
         """Read configuration and start hosting the webserver."""
