@@ -39,6 +39,8 @@ class WebServer(Resource):
             reactor.listenTCP(port, server.Site(self), interface=ip)
 
     def getChild(self, name, request):
+        versionString = 'multiminer/%d.%d' % self.server.versionNumber
+        request.setHeader('Server', versionString)
         if request.method == 'GET' or request.path != '/':
             return self.root
         else:
@@ -207,7 +209,7 @@ class WebServer(Resource):
             username = str(params[0])
             password = str(params[1])
         else:
-            return
+            return False
         
         worker = WorkerAccount(self.server, username)
         if not worker.exists():

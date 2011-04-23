@@ -40,9 +40,9 @@ class WorkerAccount(object):
     
     def delete(self):
         """Delete this worker from the database."""
-        self.server.db.execute('DELETE FROM workers WHERE id=? LIMIT 1;',
+        self.server.db.execute('DELETE FROM workers WHERE id=?;',
                                (self.id,))
-        self.server.db.execute('DELETE FROM workerdata WHERE worker=? LIMIT 1;',
+        self.server.db.execute('DELETE FROM workerdata WHERE worker=?;',
                                (self.id,))
         self.id = None
     
