@@ -4,7 +4,7 @@ from twisted.web import server, script
 from twisted.web.resource import Resource
 from twisted.web.static import File
 from WorkerAccount import WorkerAccount
-from Midstate import calculateMidstate
+from minerutil.Midstate import calculateMidstate
 
 def rpcError(code, msg):
     return '{"result": null, "error": {"code": %d, "message": "%s"}, ' \

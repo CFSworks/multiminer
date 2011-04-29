@@ -21,7 +21,7 @@
 # If you like it, send 5.00 BTC to 1DKSjFCdUmfivJEL5Gvj41oNspNMsfgy3S :)
 
 import time
-from MMPProtocol import MMPProtocolBase
+from minerutil.MMPProtocol import MMPProtocolBase
 from WorkerAccount import WorkerAccount
 
 class WorkerConnection(MMPProtocolBase):

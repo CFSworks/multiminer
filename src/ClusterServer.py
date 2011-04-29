@@ -34,8 +34,7 @@ class ClusterServer(Factory):
 
     protocol = WorkerConnection
     
-    versionNumber = (1, 3)
-    version = 'Multiminer Server v%d.%d by CFSworks' % versionNumber
+    versionNumber = (1, 4)
     
     def __init__(self, db):
         self.db = db

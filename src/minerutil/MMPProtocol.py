@@ -1,26 +1,42 @@
-# This file is in the public domain.
+# Copyright (C) 2011 by jedi95 <jedi95@gmail.com> and 
+#                       CFSworks <CFSworks@gmail.com>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
 
 from twisted.internet import reactor, defer
 from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.protocols.basic import LineReceiver
 
-class MMPWorkUnit(object):
-    data = None
-    mask = None
-    target = None
+from ClientBase import *
 
 class MMPProtocolBase(LineReceiver):
     delimiter = '\r\n'
     commands = {} # To be overridden by superclasses...
 
     def lineReceived(self, line):
-        # The protocol uses IRC-style argument passing. That is, space-separated
+        # The protocol uses IRC-style argument passing. i.e. space-separated
         # arguments, with the final one optionally beginning with ':' (in which
         # case, the final argument is the only one that may contain spaces).
         halves = line.split(' :', 1)
         args = halves[0].split(' ') # The space-separated part.
         if len(halves) == 2:
-            args.append(halves[1]) # The final argument which might have spaces.
+            args.append(halves[1]) # The final argument; could contain spaces.
         
         cmd = args[0]
         args = args[1:]
@@ -31,8 +47,8 @@ class MMPProtocolBase(LineReceiver):
         """Handle a parsed command.
         
         This function takes care of converting arguments to their appropriate
-        types and then calls the function handler. If a command is unrecognized,
-        it is ignored.
+        types and then calls the function handler. If a command is unknown,
+        it is dispatched to illegalCommand.
         """
         function = getattr(self, 'cmd_' + cmd, None)
         
@@ -60,13 +76,15 @@ class MMPProtocolBase(LineReceiver):
     def illegalCommand(self, cmd):
         pass # To be overridden by superclasses...
     
-class MMPClientProtocol(MMPProtocolBase):
+class MMPClientProtocol(MMPProtocolBase, ClientBase):
     """The actual connection to an MMP server. Probably not a good idea to use
     this directly, use MMPClient instead.
     """
     
     # A suitable default, but the server really should set this itself.
     target = ('\xff'*28) + ('\x00'*4)
+    
+    metaSent = False
     
     commands = {
         'MSG':      (str,),
@@ -77,13 +95,6 @@ class MMPClientProtocol(MMPProtocolBase):
         'REJECTED': (str,),
     }
     
-    def runCallback(self, callback, *args):
-        """Call the callback on the handler, if it's there, specifying args."""
-        
-        func = getattr(self.factory.handler, 'on' + callback.capitalize(), None)
-        if callable(func):
-            func(*args)
-    
     def connectionMade(self):
         self.factory.connection = self
         self.runCallback('connect')
@@ -92,6 +103,7 @@ class MMPClientProtocol(MMPProtocolBase):
         # Got meta?
         for var,value in self.factory.meta.items():
             self.sendMeta(var, value)
+        self.metaSent = True
     
     def connectionLost(self, reason):
         self.runCallback('disconnect')
@@ -121,7 +133,7 @@ class MMPClientProtocol(MMPProtocolBase):
             return
         if len(data) != 80:
             return
-        wu = MMPWorkUnit()
+        wu = AssignedWork()
         wu.data = data
         wu.mask = mask
         wu.target = self.target
@@ -138,7 +150,7 @@ class MMPClientProtocol(MMPProtocolBase):
     def cmd_REJECTED(self, data):
         self.factory._resultReturned(data, False)
 
-class MMPClient(ReconnectingClientFactory):
+class MMPClient(ReconnectingClientFactory, ClientBase):
     """This class implements an outbound connection to an MMP server.
     
     It's a factory so that it can automatically reconnect when the connection
@@ -151,23 +163,34 @@ class MMPClient(ReconnectingClientFactory):
     
     username = None
     password = None
+    meta = {'version': 'MMPClient v0.8 by CFSworks'}
     
+    deferreds = {}
     connection = None
     
-    def __init__(self, handler):
+    def __init__(self, handler, host, port, username, password):
         self.handler = handler
-        self.meta = {'version': 'MMPClient v0.8 by CFSworks'}
-        self.deferreds = {}
-    
-    def connect(self, host, port, username, password):
-        """Tells the MMPClient where the MMP server is located, as well as what
-        username/password should be used when connecting, and to connect if it
-        hasn't already.
-        """
+        self.host = host
+        self.port = port
         self.username = username
         self.password = password
+    
+    def buildProtocol(self, addr):
+        p = self.protocol()
+        p.factory = self
+        p.handler = self.handler
+        return p
+    
+    def clientConnectionFailed(self, connector, reason):
+        self.runCallback('failure')
+    
+        return ReconnectingClientFactory.clientConnectionFailed(
+            self, connector, reason)
+    
+    def connect(self):
+        """Tells the MMPClient to connect if it hasn't already."""
         
-        reactor.connectTCP(host, port, self)
+        reactor.connectTCP(self.host, self.port, self)
     
     def requestWork(self):
         """If connected, ask the server for more work. The request is not sent
@@ -182,8 +205,23 @@ class MMPClient(ReconnectingClientFactory):
         immediately, if already connected.)
         """
         self.meta[var] = value
-        if self.connection:
+        if self.connection and self.connection.metaSent:
             self.connection.sendMeta(var, value)
+    
+    def setVersion(self, shortname, longname=None, version=None, author=None):
+        """Tells the protocol the application's version."""
+        
+        vstr = longname if longname is not None else shortname
+        
+        if version is not None:
+            if not version.startswith('v') and not version.startswith('r'):
+                version = 'v' + version
+            vstr += ' ' + version
+        
+        if author is not None:
+            vstr += ' by ' + author
+        
+        self.setMeta('version', vstr)
     
     def sendResult(self, result):
         """Submit a work result to the server. Returns a deferred which

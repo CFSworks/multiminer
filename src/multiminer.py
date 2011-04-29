@@ -35,17 +35,9 @@ parser.add_option("-f", "--db-file", dest="_db", default=":memory:",
 parser.add_option("-c", "--create", action="store_true", dest="_create",
                   help="create a new, permanent database file (initializing it "
                   "with the below options)")
-parser.add_option("-o", "--host", dest="_host", default="127.0.0.1",
-                  help="backend host to connect to", metavar="host")
-parser.add_option("-n", "--port", dest="_port",
-                  help="backend port to connect to", metavar="port")
-parser.add_option("-u", "--user", dest="_user", default="bitcoin",
-                  help="backend username to use to log in", metavar="username")
-parser.add_option("-p", "--pass", dest="_password", default="bitcoin",
-                  help="backend password to use to log in", metavar="password")
-parser.add_option("-m", "--mmp", action="store_const", dest="_protocol",
-                  const="mmp", default="http",
-                  help="backend server is an MMP server, not a Bitcoin client")
+parser.add_option("-u", "--url", dest="url",
+                  default="http://bitcoin:bitcoin@localhost:8332/",
+                  help="backend url to connect to")
 parser.add_option("-U", "--admin-user", dest="_adminuser", default="admin",
                   help="local administrator username", metavar="username")
 parser.add_option("-P", "--admin-pass", dest="_adminpass", default="admin",
@@ -68,15 +60,8 @@ def populateDB(db, options):
     """Populate a specified SQLite DB with data."""
     db.execute('CREATE TABLE config (var VARCHAR UNIQUE, value VARCHAR);')
     
-    if options._port is None:
-        options._port = '8880' if options._protocol == 'mmp' else '8332'
-    
     config = dict(options.__dict__)
-    config['backend_url'] = '%s://%s:%s@%s:%s' % (options._protocol,
-                                                  options._user,
-                                                  options._password,
-                                                  options._host,
-                                                  options._port)
+    config['backend_url'] = options.url
     
     for var,value in config.items():
         if not var.startswith('_') and value is not None:

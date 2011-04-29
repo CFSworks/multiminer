@@ -1,4 +1,23 @@
-# This file is in the public domain.
+# Copyright (C) 2011 by jedi95 <jedi95@gmail.com> and 
+#                       CFSworks <CFSworks@gmail.com>
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
 
 import struct
 
@@ -33,28 +52,33 @@ def rotateright(i,p):
 
 def addu32(*i):
     return sum(list(i))&0xFFFFFFFF
-    
-def calculateMidstate(data):
+
+def calculateMidstate(data, state=None, rounds=None):
     """Given a 512-bit (64-byte) block of (little-endian byteswapped) data,
     calculate a Bitcoin-style midstate. (That is, if SHA-256 were little-endian
     and only hashed the first block of input.)
-    
     """
     if len(data) != 64:
         raise ValueError('data must be 64 bytes long')
     
     w = list(struct.unpack('<IIIIIIIIIIIIIIII', data))
     
-    a = A0
-    b = B0
-    c = C0
-    d = D0
-    e = E0
-    f = F0
-    g = G0
-    h = H0
+    if state is not None:
+        if len(state) != 32:
+            raise ValueError('state must be 32 bytes long')
+        a,b,c,d,e,f,g,h = struct.unpack('<IIIIIIII', state)
+    else:
+        a = A0
+        b = B0
+        c = C0
+        d = D0
+        e = E0
+        f = F0
+        g = G0
+        h = H0
     
-    for k in K:
+    consts = K if rounds is None else K[:rounds]
+    for k in consts:
         s0 = rotateright(a,2) ^ rotateright(a,13) ^ rotateright(a,22)
         s1 = rotateright(e,6) ^ rotateright(e,11) ^ rotateright(e,25)
         ma = (a&b) ^ (a&c) ^ (b&c)
@@ -71,13 +95,14 @@ def calculateMidstate(data):
         w.append(addu32(w[0], s0, w[9], s1))
         w.pop(0)
 
-    a = addu32(a, A0)
-    b = addu32(b, B0)
-    c = addu32(c, C0)
-    d = addu32(d, D0)
-    e = addu32(e, E0)
-    f = addu32(f, F0)
-    g = addu32(g, G0)
-    h = addu32(h, H0)
+    if rounds is None:
+        a = addu32(a, A0)
+        b = addu32(b, B0)
+        c = addu32(c, C0)
+        d = addu32(d, D0)
+        e = addu32(e, E0)
+        f = addu32(f, F0)
+        g = addu32(g, G0)
+        h = addu32(h, H0)
     
     return struct.pack('<IIIIIIII', a, b, c, d, e, f, g, h)

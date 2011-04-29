@@ -21,21 +21,8 @@
 # If you like it, send 5.00 BTC to 1DKSjFCdUmfivJEL5Gvj41oNspNMsfgy3S :)
 
 from twisted.internet import defer
-from MMPProtocol import MMPClient
-from RPCProtocol import RPCClient
+from minerutil import openURL
 from WorkUnit import WorkUnit
-
-class BackendURL(object):
-    def __init__(self, url):
-        # If any parse error occurs, we'll get a TypeError or ValueError, which
-        # is good enough to trip the getConfig function into using the default.
-        url = str(url)
-        self.url = url
-        self.type, url = tuple(url.split('://'))
-        auth, host = tuple(url.split('@'))
-        self.username, self.password = tuple(auth.split(':'))
-        self.host, port = tuple(host.split(':'))
-        self.port = int(port)
 
 class WorkProvider(object):
     """A work provider maintains a list of WorkUnit objects, and serves as
@@ -56,17 +43,13 @@ class WorkProvider(object):
         connection.
         """
         
-        backend = self.server.getConfig('backend_url', BackendURL,
-                    BackendURL('http://bitcoin:bitcoin@127.0.0.1:8332'))
+        url = self.server.getConfig('backend_url', str,
+            'http://bitcoin:bitcoin@127.0.0.1:8332/')
         
-        if backend.type == 'mmp':
-            self.backend = MMPClient(self)
-            self.backend.setMeta('version', self.server.version)
-            self.backend.connect(backend.host, backend.port,
-                                 backend.username, backend.password)
-        elif backend.type == 'http':
-            self.backend = RPCClient(self)
-            self.backend.connect(backend.url)
+        self.backend = openURL(url, self)
+        self.backend.setVersion('multiminer', 'Multiminer Server', '%d.%d' %
+            self.server.versionNumber)
+        self.backend.connect()
             
     def onConnect(self):
         """Called by the backend when it successfully connects.
@@ -152,7 +135,7 @@ class WorkProvider(object):
             if unit.mask < desiredMask:
                 continue
             
-            # Found a unit big enough, pull it off the list and start splitting.
+            # Found a unit big enough, pull it off the list and start splitting
             self.work.remove(unit)
             while unit.mask > desiredMask:
                 unit, other = unit.split()
