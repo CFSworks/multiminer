@@ -44,7 +44,13 @@ class WorkProvider(object):
         """
         
         url = self.server.getConfig('backend_url', str,
-            'http://bitcoin:bitcoin@127.0.0.1:8332/')
+            'http://bitcoin:bitcoin@127.0.0.1:8332/', callback=self.start)
+        
+        # If there is already a backend, be sure to disconnect it first,
+        # because this function is also called as a callback when backend_url
+        # changes.
+        if self.backend:
+            self.backend.disconnect()
         
         self.backend = openURL(url, self)
         self.backend.setVersion('multiminer', 'Multiminer Server', '%d.%d' %
@@ -91,6 +97,9 @@ class WorkProvider(object):
     
     def onBlock(self, block):
         """New block on the Bitcoin network; inform connected workers."""
+        
+        if block == self.block:
+            return
         
         self.block = block
         for worker in self.server.workers:

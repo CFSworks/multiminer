@@ -34,20 +34,27 @@ class ClusterServer(Factory):
 
     protocol = WorkerConnection
     
-    versionNumber = (1, 4)
+    versionNumber = (1, 45)
     
     def __init__(self, db):
         self.db = db
         self.workProvider = WorkProvider(self)
         self.workers = []
         self.web = None
+        self.configCallbacks = {}
     
-    def getConfig(self, var, type=str, default=None):
+    def getConfig(self, var, type=str, default=None, callback=None):
         """Reads a configuration variable out of the database.
         
         Will attempt to convert it into the specified type. If the variable
         is not found, or type conversion fails, returns the default.
         """
+        # Take care of the callback first, before encountering any returns...
+        if callable(callback):
+            callbacks = self.configCallbacks.setdefault(var, [])
+            if callback not in callbacks:
+                callbacks.append(callback)
+        
         # This should only loop once.
         for value, in self.db.execute('SELECT value FROM config WHERE var=? '
                                       'LIMIT 1;', (var,)):
@@ -78,6 +85,10 @@ class ClusterServer(Factory):
         if value is not None: # Setting to None means the variable gets cleared.
             self.db.execute('INSERT INTO config (var,value) VALUES (?,?);',
                            (var, str(value)))
+
+        # Now inform any waiting callbacks...
+        for callback in self.configCallbacks.get(var, []):
+            callback()
     
     def listAccountConnections(self, username):
         """List every connected, logged-in worker using the specified username.

@@ -105,6 +105,21 @@ class RPCClient(ClientBase):
         else:
             self._startRequest()
     
+    def disconnect(self):
+        """Shuts down the RPCClient. It should not be connect()ed again."""
+        
+        if not self.active:
+            return
+        self.active = False
+        
+        if self.connected:
+            self.connected = False
+            self.runCallback('disconnect')
+        
+        if self.polling.running:
+            self.polling.stop()
+        self._setLongPollingPath(None)
+    
     def requestWork(self):
         """Request work from the server immediately."""
         
@@ -304,6 +319,8 @@ class RPCClient(ClientBase):
     
     def _failure(self, msg=None):
         """Something didn't work right. Handle it and tell the application."""
+        if not self.active:
+            return
         if msg:
             self.runCallback('msg', msg)
         if self.connected:
@@ -319,7 +336,7 @@ class RPCClient(ClientBase):
         """Something just worked right, tell the application if we haven't
         already.
         """
-        if self.connected:
+        if self.connected or not self.active:
             return
         # We got the connection back, but if the user doesn't want an askrate,
         # stop asking...

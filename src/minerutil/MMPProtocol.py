@@ -192,6 +192,16 @@ class MMPClient(ReconnectingClientFactory, ClientBase):
         
         reactor.connectTCP(self.host, self.port, self)
     
+    def disconnect(self):
+        """Tells the MMPClient to disconnect or stop connecting.
+        The MMPClient shouldn't be used again.
+        """
+        
+        if self.connection is not None:
+            self.connection.transport.loseConnection()
+        
+        self.stopTrying()
+    
     def requestWork(self):
         """If connected, ask the server for more work. The request is not sent
         if the client isn't connected, since the server will provide work upon
